@@ -12,9 +12,9 @@ export default class AuthRouter {
   }
 
   public buildRoutes(): express.Router {
-    this.buildRouteSignIn();
-    this.buildRouteSignOn();
-    this.buildRouteSignOut();
+    this.buildRouteSignIn(); // server_addr:port/v1/auth/signin
+    this.buildRouteSignOn(); // server_addr:port/v1/auth/signon
+    this.buildRouteSignOut(); // server_addr:port/v1/auth/signout
     this.buildRoutePasswordReset();
     this.buildRouteVerifyMail();
     this.buildRouteResendVerificationMail();

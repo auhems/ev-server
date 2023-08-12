@@ -1,3 +1,4 @@
+// create evse-admin in db admin and user evse-user in db evse
 db = db.getSiblingDB('admin');
 db.createUser(
   {

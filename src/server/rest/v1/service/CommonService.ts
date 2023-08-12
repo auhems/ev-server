@@ -12,14 +12,30 @@ const MODULE_NAME = 'CommonService';
 
 export default class CommonService {
 
+  /**
+   * validate incoming request to see if tenant specified in the request is valid
+   *
+   * @param req
+   * @param res
+   * @param next
+   */
   public static async checkTenantValidity(req: Request, res: Response, next: NextFunction): Promise<void> {
+    console.log('checkTenantValidity is running\n');
+    // console.log('req->\n', req);
+    // console.log('res->\n', res);
     try {
       // Get Tenant ID/Sub Domain from HTTP Request
       const httpRequest = {
         ...Utils.cloneObject(req.body),
         ...Utils.cloneObject(req.query)
       };
+
+      console.log(`httpRequest->${JSON.stringify(httpRequest)}`);
+
       const filteredRequest = CommonValidatorRest.getInstance().validateAuthVerifyTenantRedirectReq(httpRequest);
+
+      console.log(`filteredRequest->${JSON.stringify(filteredRequest)}`);
+
       // Get the Tenant information
       let tenantID: string;
       let tenantSubdomain: string;
@@ -40,9 +56,11 @@ export default class CommonService {
       }
       // No Tenant info found
       if (!tenantID && !tenantSubdomain) {
+        console.warn('no tenant info found');
         // Handle the default tenant
         if (Utils.objectHasProperty(httpRequest, 'tenant') || Utils.objectHasProperty(httpRequest, 'Tenant')) {
           req.tenant = await AuthService.getTenant('');
+          console.warn('set tenant to', req.tenant);
         }
         next();
         return;
@@ -50,6 +68,7 @@ export default class CommonService {
       // Get the Tenant
       let tenant: Tenant;
       if (tenantID) {
+        console.info(`tenant id->${tenantID}`);
         tenant = await TenantStorage.getTenant(tenantID);
         if (!tenant) {
           throw new AppError({

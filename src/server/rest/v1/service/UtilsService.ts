@@ -89,7 +89,12 @@ export default class UtilsService {
 
   public static async checkReCaptcha(tenant: Tenant, action: ServerAction, method: string,
       centralSystemRestConfig: CentralSystemRestServiceConfiguration, captcha: string, remoteAddress: string): Promise<void> {
+    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>');
+    console.log('checkReCaptcha');
     const response = await UtilsService.performRecaptchaAPICall(tenant, centralSystemRestConfig, captcha, remoteAddress);
+
+    console.error('reCaptcha response->%s', response.headers, response.data);
+
     if (!response.data.success) {
       throw new AppError({
         errorCode: HTTPError.GENERAL_ERROR,

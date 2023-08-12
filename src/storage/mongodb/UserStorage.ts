@@ -86,10 +86,17 @@ export default class UserStorage {
   }
 
   public static async getUserByEmail(tenant: Tenant, email: string = Constants.UNKNOWN_STRING_ID): Promise<User> {
+    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>');
+    console.log('UserStorage.getUserByEmail');
+    console.log('tenant->', tenant);
     const userMDB = await UserStorage.getUsers(tenant, {
       email: email,
     }, Constants.DB_PARAMS_SINGLE_RECORD);
-    return userMDB.count === 1 ? userMDB.result[0] : null;
+    const user = userMDB.count === 1 ? userMDB.result[0] : null;
+    console.info('================================================');
+    console.info(`UserStorage.getUserByEmail returns ->${JSON.stringify(user, null, 2)}`);
+    // user.status = UserStatus.ACTIVE;
+    return user;
   }
 
   public static async getUserByPasswordResetHash(tenant: Tenant, passwordResetHash: string = Constants.UNKNOWN_STRING_ID): Promise<User> {
@@ -699,6 +706,7 @@ export default class UserStorage {
     // Project
     DatabaseUtils.projectFields(aggregation, projectFields);
     // Read DB
+    console.log(`read db condition->${JSON.stringify(aggregation)}`);
     const usersMDB = await global.database.getCollection<any>(tenant.id, 'users')
       .aggregate<any>(aggregation, DatabaseUtils.buildAggregateOptions())
       .toArray() as User[];

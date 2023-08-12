@@ -14,14 +14,14 @@ const MODULE_NAME = 'RestServer';
 export default class RestServer {
   private static centralSystemRestConfig: CentralSystemRestServiceConfiguration;
   private static restHttpServer: http.Server;
-  private expressApplication: Application;
+  private expressApplication: Application; // an web application implemented with Express, this member is instantiated in constructor
 
   // Create the rest server
   public constructor(centralSystemRestConfig: CentralSystemRestServiceConfiguration) {
     // Keep params
     RestServer.centralSystemRestConfig = centralSystemRestConfig;
     // Initialize express app
-    this.expressApplication = ExpressUtils.initApplication('1mb', centralSystemRestConfig.debug);
+    this.expressApplication = ExpressUtils.initApplication('1mb', centralSystemRestConfig.debug); // create app
     // Authentication
     this.expressApplication.use(AuthService.initialize());
     // Routers

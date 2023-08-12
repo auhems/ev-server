@@ -56,6 +56,8 @@ export default class AuthService {
   }
 
   public static async handleLogIn(action: ServerAction, req: Request, res: Response, next: NextFunction): Promise<void> {
+    console.error('AuthService.handleLogIn is in action');
+
     // Check Tenant
     if (!req.tenant) {
       throw new AppError({
@@ -67,7 +69,13 @@ export default class AuthService {
     // Filter
     const filteredRequest = AuthValidatorRest.getInstance().validateAuthSignInReq(req.body);
     req.user = { tenantID: req.tenant.id };
+
+    console.info(`about to get user -> ${JSON.stringify(filteredRequest)}`);
+
     const user = await UserStorage.getUserByEmail(req.tenant, filteredRequest.email);
+
+    console.warn(`returned -> ${JSON.stringify(user)}`);
+
     UtilsService.assertObjectExists(action, user, `User with email '${filteredRequest.email}' does not exist`,
       MODULE_NAME, 'handleLogIn', req.user);
     // Check if the number of trials is reached
@@ -91,7 +99,9 @@ export default class AuthService {
           // Read user again
           const updatedUser = await UserStorage.getUser(req.tenant, user.id);
           // Check user
+          console.info('about to check user login');
           await AuthService.checkUserLogin(action, req.tenant, updatedUser, filteredRequest, req, res, next);
+          console.info('user login checked okay');
         } else {
           // Return data
           throw new AppError({
@@ -115,6 +125,12 @@ export default class AuthService {
   }
 
   public static async handleRegisterUser(action: ServerAction, req: Request, res: Response, next: NextFunction): Promise<void> {
+    /**
+     * handle signOn request
+     */
+    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>');
+    console.log('register new user');
+    // console.log('req->', req);
     // Check Tenant
     if (!req.tenant) {
       throw new AppError({
@@ -132,8 +148,13 @@ export default class AuthService {
     }
     req.user = { tenantID: req.tenant.id };
     // Check reCaptcha
+    console.log('=================================================');
+    console.warn('before checking recaptcha');
     await UtilsService.checkReCaptcha(req.tenant, action, 'handleRegisterUser',
       centralSystemRestConfig, filteredRequest.captcha, req.connection.remoteAddress);
+    console.log('=================================================');
+    console.info('after checking recaptcha');
+
     // Check email
     const user = await UserStorage.getUserByEmail(req.tenant, filteredRequest.email);
     if (user) {
@@ -680,6 +701,7 @@ export default class AuthService {
     }
     // Check password hash
     if (match || (user.password === Utils.hashPassword(filteredRequest.password))) {
+      console.log(`user snapshot ->${JSON.stringify(user)}`);
       // Check status
       switch (user.status) {
         case UserStatus.PENDING:
