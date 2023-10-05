@@ -300,13 +300,17 @@ uses port `9090`
 
 uses port `9080`
 
-### Front end server
+### Front end server (REST API)
 
 Talks to web browser dashboard
 
 Interface <1> `CentralSystemServer`
 
+The api specification is available at: [`./src/assets/server/rest/v1/docs/e-mobility-oas.json`](./src/assets/server/rest/v1/docs/e-mobility-oas.json).
+
 ## Source Code analysis
+
+### main entrance of the program
 
 This main entrance is in `src/start.ts`. It invokes `Bootstrap.start()` to start the program.
 
@@ -351,4 +355,90 @@ Authentication related endpoints are defined in `src/server/rest/v1/service/Auth
   generate a 10-char salt
   salt will be used to calculate hash of password. salt can be worked out from hash
   use bcrypt.compare to check
-  
+
+### Configuration
+
+The ev-server's configuration is provided in `./src/assets/config.json`. There is a utility class defined in `./src/utils/Configurations.ts` that provide access to the configured settings.
+
+Here is a list of sections found in the configuration file:
+
+No. | Section | Purpose | References
+----|---------|---------|------------
+1   | EVDatabase     |
+2   | Crypto         |
+3*  | CentralSystems | This controls the implementation of the Central System defined in the OCPP protocol, should be a list of implemented interfaces  | [`Configuration.getCentralSystemsConfig()`](./src/utils/Configuration.ts#L90) [`CentralSystemConfiguration`](./src/types/configuration/CentralSystemConfiguration.ts#L8)
+4*  | CentralSystemRestService | How the ev-server backend exposes its service | [`Configuration.getCentralSystemRestServiceConfig()`](./src/utils/Configuration.ts#L111) [`CentralSystemRestServiceConfiguration`](./src/types/configuration/CentralSystemRestServiceConfiguration.ts#L3)
+5   | CentralSystemFrontEnd |
+6*  | OCPIService | Configures the basics of central system service for OCPI, host, port, protocol, logging level, etc. | [`Configuration.getOCPIServiceConfig()`](./src/utils/Configuration.ts#L128) [`OCPIServiceConfiguration`](./src/types/configuration/OCPIServiceConfiguration.ts#L3)
+7*  | OICPService | Configures the basics of central system service for OICP, host, port, protocol, logging level, etc. | [`Configuration.getOICPServiceConfig()`](./src/utils/Configuration.ts#L135) [`OICPServiceConfiguration`](./src/types/configuration/OICPServiceConfiguration.ts)
+8   | CentralSystemServer |
+9*  | ODataService | Configures the basic of central system service for OData, host, port, protocol, logging level, etc. | [`Configuration.getODataServiceConfig()`](./src/utils/Configuration.ts#L142) [`ODataServiceConfiguration`](./src/types/configuration/ODataServiceConfiguration.ts#L3)
+10  | WSDLEndpoint | | [`Configuration.getWSDLEndpointConfig()`](./src/utils/Configuration.ts#L156) [Utils.buildOCPPServerSecureURL()](./src/utils/Utils.ts#L933)
+11  | JsonEndpoint | | [`Configuration.getJsonEndpointConfig()`](./src/utils/Configuration.ts#L163) [`Configuration.getWSDLEndpointConfig()`](./src/utils/Configuration.ts#L156) [Utils.buildOCPPServerSecureURL()](./src/utils/Utils.ts#L936)
+12  | OCPIEndpoint | | [`Configuration.getOCPIEndpointConfig()`](./src/utils/Configuration.ts#L173) [`OCPIUtils.buildOcpiCredentialObject`](./src/server/ocpi/OCPIUtils.ts#L57) [`OCPIClient.getLocalEndpointUrl()`](./src/client/ocpi/OCPIClient.ts#L248)
+13* | AsyncTask | | [`Configuration.getAsyncTaskConfig()`](./src/utils/Configuration.ts#L65) [`AsyncTaskConfiguration`](./src/types/configuration/AsyncTaskConfiguration.ts#L1)
+14* | Storage | How to connect to MongoDB | [`Configuration.getStorageConfig()`](./src/utils/Configuration.ts#L208) [`StorageConfiguration`](./src/types/configuration/StorageConfiguration.ts#L1)
+15  | Notification
+16  | Firebase
+17  | Axios
+18  | Email | How to send emails | [`EMailNotificationTasks`](./src/notification/email/EMailNotificationTask.ts#L25)
+19  | Authorization | | [`Configuration.getAuthorizationConfig()`](./src/utils/Configuration.ts#L104) [`Authorizations.getConfiguration()`](./src/authorization/Authorizations.ts#L963)
+20* | ChargingStation | Controls how the central system should interact with charge point as defined in the OCPP protocol| [`Configuration.getChargingStationConfig()`](./src/utils/Configuration.ts#L215) [`ChargingStationConfiguration`](./src/types/configuration/ChargingStationConfiguration.ts#L1)
+21* | Migration | | [`Configuration.getSchedulerConfig()`](./src/utils/Configuration.ts#L58) [`MigrationConfiguration`](./src/types/configuration/MigrationConfiguration.ts#L1)
+22* | Scheduler | | [`Configuration.getMigrationConfig()`](./src/utils/Configuration.ts#L242) [`SchedulerConfiguration`](./src/types/configuration/SchedulerConfiguration.ts#L1)
+23  | Trace | | [`Configuration.getTraceConfig()`](./src/utils/Configuration.ts#L265) [`Logging.getTraceConfiguration()`](./src/utils/Logging.ts#L44)
+24  | Logging | control logging level | [`Configuration.getLogConfig()`](./src/utils/Configuration.ts#L235) [`Logging.getConfiguration()`](./src/utils/Logging.ts#L37)
+
+*Note*: sections marked with `*` are the ones read during system bootstrap process.
+
+*Note*: section `Monitoring` and `Cache` seem missing from current config. They are both mentioned in [`Bootstrap.start()`](./src/start.ts#L83)
+
+## Notes of web sockets
+
+Client first send handshake request to the server
+
+```txt
+GET / HTTP/1.1
+Host: ws.example.com
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Key: x3JJHMbDL1EzLkh9GBhXDw==
+Sec-WebSocket-Version: 13
+Origin: http://example.com
+```
+
+The `sec-websocket-key` tells the server the key uses for this client and `sec-websocket-version` tells the server which web socket version that the client prefers.
+
+The server then reply the handshake response:
+
+```txt
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: HSmrc0sMlYUkAGmm5OPpG2HaGWk=
+```
+
+Note that 101 indicates protocol switch. The value of `sec-websocket-accept` is calculated based on client provided `sec-websocket-key` and [a magic string `258EAFA5-E914-47DA-95CA-C5AB0DC85B11`](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#server_handshake_response).
+
+## References
+
+### Deployed Trial
+
+item | value
+-----------|----------------------|------------
+Site       | http://qingmaiche.cn |
+superadmin | super.admin@ev.com   | Slf.admin00
+Admin      | slf.admin@ev.com     | Slf.admin00
+Basic      | basic@ev.com         | Slf.admin00
+Demo       | demo@ev.com          | Slf.admin00
+
+### Information
+
+* [VIN](https://en.wikipedia.org/wiki/Vehicle_identification_number)
+* [RFID](https://en.wikipedia.org/wiki/Radio-frequency_identification)
+
+* [Read websocket response with curl](https://stackoverflow.com/questions/47860689/how-to-read-a-websocket-response-with-curl)
+* [Writing Websocket server](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers)
+* [Writing WebSocket client application](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_client_applications)
+* [Rfc 6455 The WebSocket Protocol](https://datatracker.ietf.org/doc/html/rfc6455)
+* [wscat](https://github.com/websockets/wscat)
