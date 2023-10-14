@@ -740,6 +740,7 @@ export default class JsonOCPPServer extends OCPPServer {
 
   private checkAndCleanupAllWebSockets() {
     setInterval(() => {
+      console.log(`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> JsonOCPPServer.checkAndCleanupAllWebSockets() @ ${(new Date).toISOString()}`);
       // Check Json connections
       this.checkAndCleanupWebSockets(this.jsonWSConnections, 'CS').catch(() => { /* Intentional */ });
       // Check Rest connections
@@ -754,6 +755,8 @@ export default class JsonOCPPServer extends OCPPServer {
     if (!Utils.isEmptyArray(wsConnectionKeys)) {
       for (const wsConnectionKey of wsConnectionKeys) {
         const wsConnection = wsConnections.get(wsConnectionKey);
+        console.log('---------------------------------');
+        console.log(`checking key:${wsConnectionKey}, connection: ${wsConnection.toString()}`);
         if (wsConnection) {
           // Get the WS
           const wsWrapper = wsConnection.getWS();
