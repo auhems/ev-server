@@ -101,6 +101,32 @@ default.users
 6476cc8e8a61ccff3271c4a1.users
 ```
 
+Table and access methods
+
+Table | Model | Method
+------|-------|--------
+cars                | [`Car`](./src/types/Car.ts#L4) |
+chargingstations    | [`ChargingStation`](./src/types/ChargingStation.ts#L15) |
+companies           | [`Company`](./src/types/Company.ts#L8) |
+connections         | [`Connection`](./src/types/Connection.ts#L2) |
+consumptions        | [`Consumption`](./src/types/Consumption.ts#L49) |
+eulas               | [`Eula`](./src/types/Eula.ts#L1) |
+importedtags
+importedusers
+invoices            | [`BillingInvoice`](./src/types/Billing.ts#L64) |
+logs                | [`Log`](./src/types/Log.ts#L7) |
+metervalues
+rawmetervalues
+rawnotifications
+settings            | [`PricingSettings`](./src/types/Setting.ts#L82) [`IntegrationSettings`](./src/types/Setting.ts#L11) |
+siteareas           | [`SiteArea`](./src/types/SiteArea.ts#L29) |
+sites               | [`Site`](./src/types/Site.ts#L12) |
+siteusers
+statusnotifications
+tags                | [`Tag`](./src/types/Tag.ts#L7) |
+transactions        | [`Transaction`](./src/types/Transaction.ts#L80) |
+users               | [`User`](./src/types/User.ts#L9) | [UserStorage.getUsers](./src/storage/mongodb/UserStorage.ts#L529)
+
 Commands to drop collections of a tenant
 
 ```txt
@@ -171,6 +197,17 @@ db.getCollection('default.tenants').updateOne(
     } 
   } // Specify the update operation using $set to update the "age" field
 )
+```
+
+### Tables added later
+
+Following tables will be added as more charge points connected
+
+```txt
+bootnotifications
+configurations
+eulas
+heartbeats
 ```
 
 ### MongoDB cheat sheet
@@ -393,6 +430,113 @@ No. | Section | Purpose | References
 
 *Note*: section `Monitoring` and `Cache` seem missing from current config. They are both mentioned in [`Bootstrap.start()`](./src/start.ts#L83)
 
+### QR code generation
+
+Charge Point (Charging station) has one or more connectors that are sequentially numbered starting from one. Each connector has a unique QR code that uniquely identifies this connector. When decoded, the QR code represents following JSON data.
+
+```json
+{
+    "chargingStationID": "CS-ABB-00001",
+    "connectorID": 1,
+    "endpoint": "https://auto1.example.com",
+    "tenantName": "auto1",
+    "tenantSubDomain": "auto1"
+}
+```
+
+The endpoint to initiate a charging session of the given connector is retrieved by calling [`Utils.getChargingStationEndpoint()`](./src/utils/Utils.ts#L1214)
+
+The e-server mobile app can decode this data and initiate a charging session using the information provided.
+
+### Transactions
+
+* Swagger Tag: Transactions
+* api prefix: `/api/transactions`
+* Service: [`TransactionService`](./src/server/rest/v1/service/TransactionService.ts#L48)
+
+List of methods:
+
+request  | handler | methods | description
+---------|---------|---------|-------------
+GET /api/transactions | [`TransactionService.handleGetTransactions`](./src/server/rest/v1/service/TransactionService.ts#L49) |  [`TransactionService.getTransactions`](./src/server/rest/v1/service/TransactionService.ts#L743) | list transactions from `<tenantId>.transactions` table.
+PUT /api/transactions/start | [`TransactionService.handleTransactionStart`](./src/server/rest/v1/service/TransactionService.ts#L265) | [`ChargingStationService.handleOcppAction`](./src/server/rest/v1/service/ChargingStationService.ts#L741) [`ChargingStationService.handleOcpiAction`](./src/server/rest/v1/service/ChargingStationService.ts#L685) | Invoke proper handler based on Charge Point settings
+
+### Billing
+
+* Swagger Tag: Billing
+* api prefix `/api/billing`
+* Service: [`BillingService`](./src/server/rest/v1/service/BillingService.ts#L31)
+
+List of methods:
+
+request  | handler | methods | description
+---------|---------|---------|-------------
+GET /api/users/{id}/payment-methods | [`BillingService.handleBillingGetPaymentMethods`](./src/server/rest/v1/service/BillingService.ts#L272)
+
+### Utility functions
+
+* [`Utils.isComponentActiveFromToken`](./src/utils/Utils.ts#429)
+
+  Decode user token and check if the specified component is included in the `activeComponents`. The possible components are defined in [`enum TenantComponents`](./src/types/Tenant.ts#L44)
+
+* [`UtilsService.assertComponentIsActiveFromToken`](./src/server/rest/v1/service/UtilsService.ts#L1209)
+
+  Invoke Utils method to check if the operation can be performed.
+
+* [`UtilsService.checkAndGetChargingStationAuthorization`](./src/server/rest/v1/service/UtilsService.ts#L119)
+
+  If user pass authorization check, return the ChargingStation pertain to this request.
+
+* [`UtilsService.assertIdIsProvided`](./src/server/rest/v1/service/UtilsService.ts#L1150)
+
+  Ensure an `Id` is provided in the input. Only Id is checked, other parameters are used for logging.
+
+* [`AuthorizationService.checkAndGetChargingStationAuthorizations`](./src/server/rest/v1/service/AuthorizationService.ts#L726)
+
+  Invoke `checkAndGetEntityAuthorizations` to validate permission and return the [`AuthorizationFilter`](./src/types/Authorization.ts#L49) to be used. The returned AuthorizationFilter will be used in db retrieval later.
+
+* [`AuthorizationService.checkAndGetEntityAuthorizations`](./src/server/rest/v1/service/AuthorizationService.ts#L1663)
+
+  Check if user (represented by [token](./src/types/UserToken.ts#L3)) can perform the specified [action](./src/types/Authorization.ts#L118) on the specified [entity](./src/types/Authorization.ts#L77) of the specified [tenant](./src/types/Tenant.ts#L4), dynamic filters will also be used if present.
+
+* [`Authorizations.can`](./src/authorization/Authorizations.ts#L693)
+
+  Check if current user (represented by token) can perform specified action on the specified entity within given context by invoking `AuthorizationsManager.canPerformAction`.
+
+* [`AuthorizationsManager.canPerformAction`](./src/authorization/AuthorizationsManager.ts#L85)
+
+  Use [`role-acl`](https://npmjs.com/package/role-acl) to perform check and cache result for future reference.
+
+### OCPPServer
+
+The [OCPP Server](./src/server/ocpp/OCPPServer.tsL#6) is responsible to communicate with charge point using OCPP protocol.
+
+It uses [`CentralSystemConfiguration`](./src/assets/config.json#L10) and [`ChargingStationConfiguration`](./src/assets/config.json#L128).
+
+```json
+{
+  "ChargingStation": {
+    "heartbeatIntervalOCPPSSecs": 60,
+    "heartbeatIntervalOCPPJSecs": 3600,
+    "pingIntervalOCPPJSecs": 60,
+    "monitoringIntervalOCPPJSecs": 600,
+    "notifBeforeEndOfChargeEnabled": true,
+    "notifBeforeEndOfChargePercent": 85,
+    "notifEndOfChargeEnabled": true,
+    "notifStopTransactionAndUnlockConnector": false,
+    "maxLastSeenIntervalSecs": 540
+  }
+}
+```
+
+`pingIntervalOCPPJSecs` controls JsonOCPPSever's behavior. Setting value to `60` requires ws connection to be checked and cleaned up every 60 seconds.
+
+`OCPPServer` is an abstract class. It has two implementations: [`JsonOCPPServer`](./src/server/ocpp/json/JsonOCPPServer.ts#L28) and [`SoapOCPPServer`](./src/server/ocpp/soap/SoapOCPPServer.ts#L22)
+
+[`WSConnection`](./src/server/ocpp/json/web-socket/WSConnection.ts#L16) is the programming model for the WS connection between Central System and the Charge Point. It provides methods to send/receive messages. [`JsonWSConnection`](./src/server/ocpp/json/web-socket/JsonWSConnection.ts#L23) is a subclass of `WSConnection`. It uses [`JsonChargingStationService`](./src/server/ocpp/json/services/JsonChargingStationService.ts#L15) to provide OCPP operations. [`WSWrapper`](./src/server/ocpp/json/web-socket/WSWrapper.ts#L10) is the programming model of [WebSocket](https://github.com/uNetworking/uWebSockets.js). One can send messages, ping or close web socket using its wrapper. WebSocket of `uWebSockets.js` already handles auto-respond to ping/pong. `WSConnection` gets notified on ping/pong events, `JsonWSConnection` uses this chance to update charing station's `lastSeen` attribute.
+
+`WSConnection` has a member `ID` that uniquely identifies itself. The format is `<tenantId>~<chargingStationId>`, see [`getID()`](./src/server/ocpp/json/web-socket/WSConnection.ts#L312). Every valid WSConnection belongs to one specific charging station of a tenant.
+
 ## Notes of web sockets
 
 Client first send handshake request to the server
@@ -421,6 +565,12 @@ Sec-WebSocket-Accept: HSmrc0sMlYUkAGmm5OPpG2HaGWk=
 Note that 101 indicates protocol switch. The value of `sec-websocket-accept` is calculated based on client provided `sec-websocket-key` and [a magic string `258EAFA5-E914-47DA-95CA-C5AB0DC85B11`](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#server_handshake_response).
 
 ## References
+
+### Resources
+
+* [Open Charge Point Interface](https://evroaming.org)
+* [Open Charge Point Protocol](https://en.wikipedia.org/wiki/Open_Charge_Point_Protocol)
+* [Open InterCharge Protocol](https://github.com/hubject/oicp)
 
 ### Deployed Trial
 
