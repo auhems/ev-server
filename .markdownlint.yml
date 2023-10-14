@@ -1,0 +1,6 @@
+no-hard-tabs: # MD010
+  code_blocks: false
+  spaces_per_tab: 1
+MD013: false
+MD031: false
+blanks-around-lists: false #MD032
