@@ -88,6 +88,12 @@ export default class OCPPService {
       setTimeout(async () => {
         await OCPPCommon.requestAndSaveChargingStationOcppParameters(tenant, chargingStation);
       }, Constants.DELAY_CHANGE_CONFIGURATION_EXECUTION_MILLIS);
+
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
+      setTimeout(async () => {
+        await OCPPCommon.sendQrCodeDataForConnectors(tenant, chargingStation);
+      }, 15000);
+
       await Logging.logInfo({
         ...LoggingHelper.getChargingStationProperties(chargingStation),
         tenantID: tenant.id,
