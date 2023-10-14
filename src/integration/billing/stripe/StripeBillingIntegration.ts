@@ -214,6 +214,7 @@ export default class StripeBillingIntegration extends BillingIntegration {
       const requestParams : Stripe.TaxRateListParams = { limit: StripeBillingIntegration.STRIPE_MAX_LIST, active: true };
       do {
         request = await this.stripe.taxRates.list(requestParams);
+        console.error('stripe returns->\n', request);
         for (const tax of request.data) {
           taxes.push({
             id: tax.id,
