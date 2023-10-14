@@ -154,16 +154,16 @@ export default class JsonWSConnection extends WSConnection {
   private isValidOcppServerCommand(command: Command): boolean {
     // Only client request is allowed
     return [
-      Command.AUTHORIZE,
-      Command.BOOT_NOTIFICATION,
-      Command.DATA_TRANSFER,
-      Command.DIAGNOSTICS_STATUS_NOTIFICATION,
-      Command.FIRMWARE_STATUS_NOTIFICATION,
-      Command.HEARTBEAT,
-      Command.METER_VALUES,
-      Command.START_TRANSACTION,
-      Command.STATUS_NOTIFICATION,
-      Command.STOP_TRANSACTION,
+      Command.AUTHORIZE,                          // 4.1 Authorization
+      Command.BOOT_NOTIFICATION,                  // 4.2 Boot Notification
+      Command.DATA_TRANSFER,                      // 4.3 Data Transfer
+      Command.DIAGNOSTICS_STATUS_NOTIFICATION,    // 4.4 Diagnostics Status Notification
+      Command.FIRMWARE_STATUS_NOTIFICATION,       // 4.5 Firmware status Notification
+      Command.HEARTBEAT,                          // 4.6 Heartbeat
+      Command.METER_VALUES,                       // 4.7 Meter Values
+      Command.START_TRANSACTION,                  // 4.8 Start Transaction
+      Command.STATUS_NOTIFICATION,                // 4.9 Status Notification
+      Command.STOP_TRANSACTION,                   // 4.10 Stop Transaction
     ].includes(command);
   }
 }
