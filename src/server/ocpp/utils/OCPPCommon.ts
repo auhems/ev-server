@@ -1,5 +1,5 @@
-import ChargingStation, { ChargingStationOcppParameters } from '../../../types/ChargingStation';
-import { OCPPChangeConfigurationRequest, OCPPChangeConfigurationResponse, OCPPConfigurationStatus, OCPPGetConfigurationRequest, OCPPGetConfigurationResponse, OCPPResetResponse, OCPPResetStatus, OCPPResetType } from '../../../types/ocpp/OCPPClient';
+import ChargingStation, { ChargingStationOcppParameters, ChargingStationQRCode, Connector } from '../../../types/ChargingStation';
+import { OCPPChangeConfigurationRequest, OCPPChangeConfigurationResponse, OCPPConfigurationStatus, OCPPDataTransferRequest, OCPPGetConfigurationRequest, OCPPGetConfigurationResponse, OCPPResetResponse, OCPPResetStatus, OCPPResetType } from '../../../types/ocpp/OCPPClient';
 
 import BackendError from '../../../exception/BackendError';
 import ChargingStationClientFactory from '../../../client/ocpp/ChargingStationClientFactory';
@@ -10,6 +10,7 @@ import LoggingHelper from '../../../utils/LoggingHelper';
 import { ServerAction } from '../../../types/Server';
 import Tenant from '../../../types/Tenant';
 import Utils from '../../../utils/Utils';
+import { OCPPDataTransferResponse } from '../../../types/ocpp/OCPPServer';
 
 const MODULE_NAME = 'OCPPCommon';
 
@@ -46,6 +47,27 @@ export default class OCPPCommon {
       await OCPPCommon.triggerChargingStationReset(tenant, chargingStation, true);
     }
     return result;
+  }
+
+  public static async sendQrCodeDataForConnectors(tenant: Tenant, chargingStation: ChargingStation): Promise<OCPPDataTransferResponse> {
+    console.log(tenant, chargingStation);
+    const chargingStationClient = await ChargingStationClientFactory.getChargingStationClient(tenant, chargingStation);
+    const qrCodeData: ChargingStationQRCode[] = [];
+    chargingStation.connectors.forEach((connector: Connector) => {
+      qrCodeData.push({
+        chargingStationID: chargingStation.id,
+        connectorID: connector.connectorId,
+        endpoint: Utils.getChargingStationEndpoint(),
+        tenantName: tenant.name,
+        tenantSubDomain: tenant.subdomain
+      } as ChargingStationQRCode);
+    });
+    const req : OCPPDataTransferRequest = {
+      vendorId: tenant.id,
+      // messageId: uuid.uuid_v4(),
+      data: JSON.stringify({})
+    };
+    return chargingStationClient.dataTransfer(req);
   }
 
   public static async requestAndSaveChargingStationOcppParameters(tenant: Tenant, chargingStation: ChargingStation): Promise<OCPPChangeConfigurationResponse> {
